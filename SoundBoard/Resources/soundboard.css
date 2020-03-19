@@ -1,0 +1,88 @@
+:root {
+    --font-primary: #d3d3d3;
+    --font-secondary: #ececec;
+    --background: #494953;
+    --background-secondary: #73727a;
+    --background-trinary: #23232e;
+    --background-playing-primary: #733f3b;
+    --background-playing-secondary: #4E1313;
+
+}
+
+body {
+    background: var(--background);
+}
+
+main {
+    padding: 1.368vw;
+}
+
+.grid {
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(5, auto);
+    gap: 1.368vw;
+    grid-auto-rows: auto;
+}
+
+.grid-item {
+    display: flex;
+    font-size: 2.28vw;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.grid-item .button {
+    background-color: var(--background-secondary);
+    position: relative;
+    width: 100%;
+    text-decoration: none;
+}
+
+.grid-item .button:before {
+    content: "";
+    float: left;
+    padding-top: 100%;
+}
+
+.grid-item .button div {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    width: 100%;
+    height: 100%;
+    display: table;
+    text-decoration: none;
+}
+
+.grid-item .button[back] div {
+    font-size: 5.7vw;
+}
+
+.grid-item .button div p {
+    display: table-cell;
+    vertical-align: middle;
+    text-align: center;
+    text-decoration: none;
+    color: var(--font-primary);
+}
+
+.grid-item:hover .button {
+    background-color: var(--background-trinary);
+}
+
+.grid-item:hover .button div p {
+    color: var(--font-secondary);
+}
+
+.grid-item .button[playing] {
+    background-color: var(--background-playing-primary);
+}
+
+.grid-item:hover .button[playing] {
+    background-color: var(--background-playing-secondary);
+}
