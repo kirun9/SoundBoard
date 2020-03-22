@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows.Forms;
 using WMPLib;
@@ -17,10 +18,14 @@ namespace SoundBoard
 	{
 
 		private List<WindowsMediaPlayer> players = new List<WindowsMediaPlayer>();
-		private string Path = @"C:\Users\Krystian\Desktop\New Sound Board List.sbl";
+		private string Path;
 		private HttpListener listener;
 		private Thread serverThread;
 		private string ActualServerPath = "SoundBoard";
+		private string FavoritePath = "!favorite!";
+		private TreeView FavoritesList;
+		private const string NewPattern = "^[0-2]\\|[0-1]\\|";
+		private bool OnlyFavorite = false;
 
 
 		private delegate void _ClickDelegate(object sender, TreeNodeMouseClickEventArgs args);
@@ -55,10 +60,6 @@ namespace SoundBoard
 				};
 			}
 //#if DEBUG
-			actionToolStripMenuItem.Enabled = true;
-			List.Enabled = true;
-			saveAsToolStripMenuItem.Enabled = true;
-			saveToolStripMenuItem.Enabled = true;
 //#endif
 			var root = List.Nodes.Add("SoundBoard", "SoundBoard");
 			root.Tag = new MainNodeTag();
@@ -189,13 +190,13 @@ namespace SoundBoard
 				if (List.SelectedNode.Tag is DirTag || List.SelectedNode.Tag is MainNodeTag)
 				{
 					var n = List.SelectedNode.Nodes.Add(dialog.SoundName, dialog.SoundName, 1, 1);
-					n.Tag = new NodeTag() { Path = dialog.FilePath, Playing = false };
+					n.Tag = new NodeTag() { Path = dialog.FilePath, Playing = false, Favorite = false };
 					List.SelectedNode.Expand();
 				}
 				else
 				{
 					var n = List.SelectedNode.Parent.Nodes.Add(dialog.SoundName, dialog.SoundName, 1, 1);
-					n.Tag = new NodeTag() { Path = dialog.FilePath, Playing = false };
+					n.Tag = new NodeTag() { Path = dialog.FilePath, Playing = false, Favorite = false };
 				}
 			}
 		}
@@ -219,7 +220,11 @@ namespace SoundBoard
 			string output = "";
 			foreach (var node in nodes)
 			{
-				output += node.FullPath + "|" + (node.Tag is MainNodeTag ? "0" : (node.Tag is DirTag ? "1" : (node.Tag is NodeTag ? "2" : ""))) + "|" + (node.Tag is NodeTag tag ? tag.Path : "") + "\n";
+				var favorite = (node.Tag is NodeTag nodeTag ? (nodeTag.Favorite ? "1" : "0") : (node.Tag is DirTag dirTag ? (dirTag.Favorite ? "1" : "0") : "0"));
+				var tagType = (node.Tag is MainNodeTag ? "0" : (node.Tag is DirTag ? "1" : (node.Tag is NodeTag ? "2" : "")));
+				var path = (node.Tag is NodeTag tag ? tag.Path : "");
+
+				output += $"{tagType}|{favorite}|{node.FullPath}|{(path)}\n";
 			}
 			File.WriteAllText(Path, output);
 		}
@@ -274,22 +279,47 @@ namespace SoundBoard
 				{
 					actualNode = root;
 					var splitted = line.Split('|');
-					string tagPath = splitted[0];
-					string type = splitted[1];
-					string soundPath = splitted[2];
+					string type;
+					string tagPath;
+					string soundPath;
+					bool favorite;
+
+					if (Regex.IsMatch(line, NewPattern))
+					{
+						type = splitted[0];
+						favorite = (splitted[1] == "1" ? true : false);
+						tagPath = splitted[2];
+						soundPath = splitted[3];
+					}
+					else
+					{
+						tagPath = splitted[0];
+						type = splitted[1];
+						soundPath = splitted[2];
+						favorite = (splitted.Length > 3 ? (splitted[3] == "1" ? true : false) : false);
+					}
 
 					foreach (var pathPart in tagPath.Split('\\'))
 					{
 						actualNode = AddNode(actualNode, pathPart);
 					}
-					actualNode.Tag = (type == "0" ? new MainNodeTag() : (type == "1" ? new DirTag() : (type == "2" ? new NodeTag() { Path = soundPath, Playing = false } : new object())));
+					actualNode.Tag = (type == "0" ? new MainNodeTag() :
+						(type == "1" ? new DirTag() { Favorite = favorite } :
+						(type == "2" ? new NodeTag() { Path = soundPath, Playing = false, Favorite = favorite } : new object())));
+					actualNode.ForeColor = favorite ? System.Drawing.Color.DarkGreen : System.Drawing.Color.Black;
 					actualNode.ImageIndex = actualNode.SelectedImageIndex = (type == "2" ? 1 : 0);
 				}
+
 				List.Nodes.Clear();
 				foreach (TreeNode node in root.Nodes)
 				{
 					List.Nodes.Add(node);
 				}
+				actionToolStripMenuItem.Enabled = true;
+				List.Enabled = true;
+				saveAsToolStripMenuItem.Enabled = true;
+				saveToolStripMenuItem.Enabled = true;
+				CheckFavorites();
 			}
 		}
 
@@ -318,7 +348,7 @@ namespace SoundBoard
 						{
 							var fileName = System.IO.Path.GetFileNameWithoutExtension(filePath);
 							var item = node.Nodes.Add(fileName, fileName, 1, 1);
-							item.Tag = new NodeTag() { Path = filePath, Playing = false };
+							item.Tag = new NodeTag() { Path = filePath, Playing = false, Favorite = false };
 						}
 					}
 					else
@@ -330,7 +360,7 @@ namespace SoundBoard
 						{
 							var fileName = System.IO.Path.GetFileNameWithoutExtension(filePath);
 							var item = node.Nodes.Add(fileName, fileName, 1, 1);
-							item.Tag = new NodeTag() { Path = filePath, Playing = false };
+							item.Tag = new NodeTag() { Path = filePath, Playing = false, Favorite = false };
 						}
 					}
 				}
@@ -342,7 +372,7 @@ namespace SoundBoard
 						{
 							var fileName = System.IO.Path.GetFileNameWithoutExtension(filePath);
 							var item = List.SelectedNode.Nodes.Add(fileName, fileName, 1, 1);
-							item.Tag = new NodeTag() { Path = filePath, Playing = false };
+							item.Tag = new NodeTag() { Path = filePath, Playing = false, Favorite = false };
 						}
 					}
 					else
@@ -351,7 +381,7 @@ namespace SoundBoard
 						{
 							var fileName = System.IO.Path.GetFileNameWithoutExtension(filePath);
 							var item = List.SelectedNode.Parent.Nodes.Add(fileName, fileName, 1, 1);
-							item.Tag = new NodeTag() { Path = filePath, Playing = false };
+							item.Tag = new NodeTag() { Path = filePath, Playing = false, Favorite = false };
 						}
 					}
 				}
@@ -396,15 +426,17 @@ namespace SoundBoard
 
 		private void contextMenuStrip1_Opening(Object sender, System.ComponentModel.CancelEventArgs e)
 		{
-			if (List.SelectedNode.Tag is MainNodeTag)
+			editToolStripMenuItem.Visible = List.SelectedNode.Tag is MainNodeTag;
+			editToolStripMenuItem.Enabled = List.SelectedNode.Tag is MainNodeTag;
+
+			if (List.SelectedNode.Tag is IFavorite favorite)
 			{
-				editToolStripMenuItem.Visible = false;
-				editToolStripMenuItem.Enabled = false;
-			}
-			else
-			{
-				editToolStripMenuItem.Visible = true;
-				editToolStripMenuItem.Enabled = true;
+				setFavoriteToolStripMenuItem.Visible = true;
+				setFavoriteToolStripMenuItem1.Visible = true;
+				setFavoriteToolStripMenuItem.Enabled = true;
+				setFavoriteToolStripMenuItem1.Enabled = true;
+				setFavoriteToolStripMenuItem.Text = favorite.Favorite ? "Remove Favorite" : "Set Favorite";
+				setFavoriteToolStripMenuItem1.Text = favorite.Favorite ? "Remove Favorite" : "Set Favorite";
 			}
 		}
 
@@ -563,7 +595,7 @@ namespace SoundBoard
 							}
 							context.Response.Close();
 						}
-						catch (Exception)
+						catch (Exception ex)
 						{
 							context.Response.StatusCode = 500;
 							context.Response.Close();
@@ -575,7 +607,7 @@ namespace SoundBoard
 				{
 
 				}
-				catch (Exception) {
+				catch (Exception ex) {
 				
 				}
 			});
@@ -584,65 +616,240 @@ namespace SoundBoard
 			startToolStripMenuItem.Enabled = false;
 		}
 
+		private TreeNode CloneNode(TreeNode node)
+		{
+			TreeNode n = new TreeNode();
+			n.Name = node.Name;
+			n.Text = node.Text;
+			foreach (TreeNode nod in node.Nodes)
+			{
+				n.Nodes.Add(CloneNode(nod));
+			}
+			n.Tag = node.Tag;
+			n.ForeColor = node.ForeColor;
+			n.SelectedImageIndex = node.SelectedImageIndex;
+			n.ImageIndex = node.ImageIndex;
+			return n;
+		}
+
+		private void CheckFavorites()
+		{
+			FavoritesList = new TreeView();
+			FavoritesList.Nodes.Clear();
+			TreeNode Favorites = new TreeNode("!favorite!");
+			FavoritesList.Nodes.Add(Favorites);
+			FavoritesList.TreeViewNodeSorter = new FavoritesComparer();
+			Favorites.Tag = new MainNodeTag();
+
+			Favorites.Nodes.Clear();
+
+			void checkNode2(TreeNode node, TreeNode parent, bool forceAdd = false)
+			{
+				if (node.Tag is NodeTag nodeTag)
+				{
+					if (forceAdd || nodeTag.Favorite)
+					{
+						var cnode = CloneNode(node);
+						(cnode.Tag as NodeTag).FavoritePath = node.FullPath;
+						//parent.Nodes.Add(cnode);
+						if (nodeTag.Favorite) Favorites.Nodes.Add(CloneNode(cnode));
+					}
+				}
+				if (node.Tag is DirTag dirTag)
+				{
+					if (forceAdd || dirTag.Favorite)
+					{
+						var cnode = CloneNode(node);
+						(cnode.Tag as DirTag).FavoritePath = node.FullPath;
+						parent.Nodes.Add(cnode);
+						if (parent != Favorites && !forceAdd) Favorites.Nodes.Add(CloneNode(cnode));
+
+						foreach (TreeNode n in node.Nodes)
+						{
+							checkNode2(n, cnode, true);
+						}
+					}
+					else
+					{
+						foreach (TreeNode n in node.Nodes)
+						{
+							checkNode2(n, parent, false);
+						}
+					}
+				}
+				if (node.Tag is MainNodeTag)
+				{
+					foreach (TreeNode n in node.Nodes)
+					{
+						checkNode2(n, parent, forceAdd);
+					}
+				}
+			}
+			checkNode2(List.Nodes[0], Favorites);
+
+		}
+
 		private string createStatus()
 		{
-			string response = $"{{\"path\":\"{ActualServerPath.Replace("\\", "/")}\", \"buttons\":[";
-
-			var anode = List.Nodes[0];
-			
-			var splitted = ActualServerPath.Split(new string[] { "\\" }, StringSplitOptions.RemoveEmptyEntries);
-			foreach (var pathPart in splitted)
+			string getNodeJSON(string path, string title, bool isPlaying, bool isBack, bool isFavorite, bool isDir)
 			{
-				if (pathPart == "SoundBoard") continue;
-				anode = anode.Nodes[pathPart];
+				var ret = "{";
+				ret += "\"id\":\"" + path.Replace("\\", "/") + "\", ";
+				ret += "\"title\":\"" + title + "\", ";
+				ret += "\"isPlaying\":\"" + isPlaying.ToString().ToLower() + "\", ";
+				ret += "\"isBack\":\"" + isBack.ToString().ToLower() +"\", ";
+				ret += "\"isFavorite\":\"" + isFavorite.ToString().ToLower() +"\", ";
+				ret += "\"isDir\":\"" + isDir.ToString().ToLower() +"\"";
+				ret += "}";
+				return ret;
 			}
 
-			var prevPath = string.Join("/", splitted.Where((part) => { return part != splitted.Last(); }));
 
-			List<string> entries = new List<string>();
-
-			if (!(anode.Tag is MainNodeTag))
-				entries.Add($"{{\"id\":\"{prevPath.Replace("\\", "/")}\", \"title\":\"\", \"isPlaying\":\"false\", \"isBack\":\"true\"}}");
-
-			foreach (TreeNode node in anode.Nodes)
+			if (OnlyFavorite)
 			{
-				//e.Node.ImageIndex = e.Node.SelectedImageIndex = 1
-				entries.Add($"{{\"id\":\"{node.FullPath.Replace("\\", "/")}\", \"title\":\"{node.Text}\", \"isPlaying\":\"{((node.Tag as NodeTag)?.Playing ?? false).ToString().ToLower()}\", \"isBack\":\"false\"}}");
+				if (!((FavoritesList?.Nodes?.Count ?? 0) > 0))
+				{
+					CheckFavorites();
+					return createStatus();
+				}
+				else
+				{
+					string response = $"{{\"path\":\"{FavoritePath.Replace("\\", "/")}\", \"buttons\":[";
+
+					var anode = FavoritesList.Nodes[0];
+
+					var splitted = FavoritePath.Split(new string[] { "\\" }, StringSplitOptions.RemoveEmptyEntries);
+					foreach (var pathPart in splitted)
+					{
+						if (pathPart == "!favorite!") continue;
+						anode = anode.Nodes[pathPart];
+					}
+
+					var prevPath = string.Join("/", splitted.Where((part) => { return part != splitted.Last(); }));
+					List<string> entries = new List<string>();
+					if (!(anode.Tag is MainNodeTag))
+						entries.Add(getNodeJSON(prevPath, "", false, true, false, false));
+						//entries.Add($"{{\"id\":\"{prevPath.Replace("\\", "/")}\", \"title\":\"\", \"isPlaying\":\"false\", \"isBack\":\"true\", \"isFavorite\":\"{(anode.Tag is IFavorite f ? f.Favorite.ToString().ToLower() : "false")}\"}}");
+
+					foreach (TreeNode node in anode.Nodes)
+					{
+						entries.Add(getNodeJSON(node.FullPath, node.Text, ((node.Tag as NodeTag)?.Playing ?? false), false, (node.Tag is IFavorite f ? f.Favorite : false), node.Tag is DirTag));
+						//entries.Add($"{{\"id\":\"{node.FullPath.Replace("\\", "/")}\", \"title\":\"{node.Text}\", \"isPlaying\":\"{((node.Tag as NodeTag)?.Playing ?? false).ToString().ToLower()}\", \"isBack\":\"false\", \"isFavorite\":\"{(node.Tag is IFavorite f ? f.Favorite.ToString().ToLower() : "false")}\"}}");
+					}
+					var str = string.Join(", ", entries);
+					response += str + "]}";
+					return response;
+				}
 			}
+			else
+			{
+				string response = $"{{\"path\":\"{ActualServerPath.Replace("\\", "/")}\", \"buttons\":[";
 
-			var str = string.Join(", ", entries);
-			response += str + "]}";
+				var anode = List.Nodes[0];
 
-			return response;
+				var splitted = ActualServerPath.Split(new string[] { "\\" }, StringSplitOptions.RemoveEmptyEntries);
+				foreach (var pathPart in splitted)
+				{
+					if (pathPart == "SoundBoard") continue;
+					anode = anode.Nodes[pathPart];
+				}
+
+				var prevPath = string.Join("/", splitted.Where((part) => { return part != splitted.Last(); }));
+
+				List<string> entries = new List<string>();
+
+				if (!(anode.Tag is MainNodeTag))
+					entries.Add(getNodeJSON(prevPath, "", false, true, false, false));
+					//entries.Add($"{{\"id\":\"{prevPath.Replace("\\", "/")}\", \"title\":\"\", \"isPlaying\":\"false\", \"isBack\":\"true\", \"isFavorite\":\"{(anode.Tag is IFavorite f ? f.Favorite.ToString().ToLower() : "false")}\"}}");
+
+				foreach (TreeNode node in anode.Nodes)
+				{
+					entries.Add(getNodeJSON(node.FullPath, node.Text, ((node.Tag as NodeTag)?.Playing ?? false), false, (node.Tag is IFavorite f ? f.Favorite : false), node.Tag is DirTag));
+					//entries.Add($"{{\"id\":\"{node.FullPath.Replace("\\", "/")}\", \"title\":\"{node.Text}\", \"isPlaying\":\"{((node.Tag as NodeTag)?.Playing ?? false).ToString().ToLower()}\", \"isBack\":\"false\", \"isFavorite\":\"{(node.Tag is IFavorite f ? f.Favorite.ToString().ToLower() : "false")}\"}}");
+				}
+
+				var str = string.Join(", ", entries);
+				response += str + "]}";
+
+				return response;
+			}
 		}
 
 		private void parseRequest(string query)
 		{
+			parseRequest(query, OnlyFavorite = query.StartsWith("!favorite!"));
+		}
+
+		private void parseRequest(string query, bool favOnly)
+		{
+			if (FavoritesList == null) CheckFavorites();
+
 			query = query.Replace("/", "\\");
-			var anode = List.Nodes[0];
+			var anode = favOnly ? FavoritesList.Nodes[0] : List.Nodes[0];
 			var splitted = query.Split(new string[]{ "\\" }, StringSplitOptions.RemoveEmptyEntries);
 			foreach (var pathPart in splitted)
 			{
 				if (pathPart == "SoundBoard") continue;
+				if (pathPart == "!favorite!") continue;
 				anode = anode.Nodes[pathPart];
 			}
 
 			if (anode.Tag is DirTag || anode.Tag is MainNodeTag)
 			{
-				ActualServerPath = anode.FullPath;
+				if (favOnly) FavoritePath = anode.FullPath;
+				else ActualServerPath = anode.FullPath;
 			}
 			else if (anode.Tag is NodeTag)
 			{
-				ClickNode(anode);
+				if (favOnly) parseRequest((anode.Tag as IFavorite).FavoritePath, false);
+				else ClickNode(anode);
 			}
 		}
 
 		private void stopToolStripMenuItem_Click(Object sender, EventArgs e)
 		{
-			listener.Abort();
-			serverThread.Abort();
+			listener?.Abort();
+			serverThread?.Abort();
 			stopToolStripMenuItem.Enabled = false;
 			startToolStripMenuItem.Enabled = true;
+		}
+
+		private void setFavoriteToolStripMenuItem1_Click(Object sender, EventArgs e)
+		{
+			if (List.SelectedNode.Tag is IFavorite favorite)
+			{
+				favorite.Favorite = !favorite.Favorite;
+				List.SelectedNode.ForeColor = favorite.Favorite ? System.Drawing.Color.Green : System.Drawing.Color.Black;
+				CheckFavorites();
+			}
+		}
+
+		private void actionToolStripMenuItem_DropDownOpening(Object sender, EventArgs e)
+		{
+			if (List.SelectedNode.Tag is IFavorite favorite)
+			{
+				setFavoriteToolStripMenuItem.Visible = true;
+				setFavoriteToolStripMenuItem1.Visible = true;
+				setFavoriteToolStripMenuItem.Enabled = true;
+				setFavoriteToolStripMenuItem1.Enabled = true;
+				setFavoriteToolStripMenuItem.Text = favorite.Favorite ? "Remove Favorite" : "Set Favorite";
+				setFavoriteToolStripMenuItem1.Text = favorite.Favorite ? "Remove Favorite" : "Set Favorite";
+			}
+		}
+	}
+
+	internal class FavoritesComparer : System.Collections.IComparer
+	{
+		public Int32 Compare(object tx, object ty)
+		{
+			TreeNode x = (TreeNode) tx;
+			TreeNode y = (TreeNode) ty;
+
+			if (x.Tag is DirTag && y.Tag is NodeTag) return -1;
+			else if (x.Tag is NodeTag && y.Tag is DirTag) return 1;
+			else if (x.Tag is NodeTag && y.Tag is NodeTag) return x.Name.CompareTo(y.Name);
+			else if (x.Tag is DirTag && y.Tag is DirTag) return x.Name.CompareTo(y.Name);
+			else return 0;
 		}
 	}
 }

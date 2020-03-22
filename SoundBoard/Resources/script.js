@@ -1,7 +1,9 @@
 var httpRequest;
 var timeStep = 1000;
 var path;
+var shouldUpdate = false;
 var buttons = new Array();
+
 function createButton(song, title, isBack) {
     if (isBack === void 0) { isBack = false; }
     var span = document.createElement("span");
@@ -23,11 +25,23 @@ function createButton(song, title, isBack) {
     buttons.push(span);
     document.getElementById("grid").append(span);
 }
+
 function start() {
+    var favorite = document.getElementById("favoriteNavBar");
+    favorite.onclick = function () {
+        sendButtonRequest("!favorite!");
+    }
+
+    var home = document.getElementById("homeNavBar");
+    home.onclick = function () {
+        sendButtonRequest("");
+    }
+
     if (timeStep) {
         statusLoop();
     }
 }
+
 function statusLoop() {
     if (!httpRequest || httpRequest.readyState === 0) {
         httpRequest = getRequest();
@@ -41,6 +55,7 @@ function statusLoop() {
     }
     setTimeout(statusLoop, timeStep);
 }
+
 function getRequest() {
     try {
         return new ActiveXObject("Msxml2.XMLHTTP");
@@ -56,6 +71,7 @@ function getRequest() {
     }
     return null;
 }
+
 function readStatus() {
     if (httpRequest && httpRequest.readyState === 4 && httpRequest.responseText) {
         if (httpRequest.responseText.charAt(0) !== "<") {
@@ -66,6 +82,10 @@ function readStatus() {
             }
             else {
                 updateButtons(json);
+            }
+            if (shouldUpdate) {
+                changeButtons(json);
+                shouldUpdate = false;
             }
         }
         httpRequest = null;
@@ -91,6 +111,10 @@ function updateButtons(json) {
                 if (json.buttons[key].id == aElement.getAttribute("data")) {
                     var playing = json.buttons[key].isPlaying === "true";
                     aElement.toggleAttribute("playing", playing);
+                    var favorite = json.buttons[key].isFavorite === "true";
+                    aElement.toggleAttribute("favorite", favorite);
+                    var dir = json.buttons[key].isDir === "true";
+                    aElement.toggleAttribute("dir", dir);
                 }
             }
         }
@@ -101,6 +125,7 @@ function sendButtonRequest(song) {
     try {
         request.open("POST", "change.html", true);
         request.send(song);
+        shouldUpdate = true;
     }
     catch (e) { }
 }

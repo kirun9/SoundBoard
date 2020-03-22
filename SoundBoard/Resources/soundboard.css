@@ -6,7 +6,10 @@
     --background-trinary: #23232e;
     --background-playing-primary: #733f3b;
     --background-playing-secondary: #4E1313;
-
+    --background-fav-primary: #484716;
+    --background-fav-secondary: #92901b;
+    --background-dir-primary: #391b00;
+    --background-dir-secondary: #552900;
 }
 
 body {
@@ -77,6 +80,22 @@ main {
 
 .grid-item:hover .button div p {
     color: var(--font-secondary);
+}
+
+.grid-item .button[favorite]:not([back]):not([dir]):not([playing]) {
+    background-color: var(--background-fav-primary);
+}
+
+.grid-item:hover .button[favorite]:not([back]):not([dir]):not([playing]) {
+    background-color: var(--background-fav-secondary);
+}
+
+.grid-item .button[dir] {
+    background-color: var(--background-dir-primary);
+}
+
+.grid-item:hover .button[dir] {
+    background-color: var(--background-dir-secondary);
 }
 
 .grid-item .button[playing] {
