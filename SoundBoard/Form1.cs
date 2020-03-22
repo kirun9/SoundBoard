@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -16,7 +17,6 @@ namespace SoundBoard
 {
 	public partial class Form1 : Form
 	{
-
 		private List<WindowsMediaPlayer> players = new List<WindowsMediaPlayer>();
 		private string Path;
 		private HttpListener listener;
@@ -27,15 +27,12 @@ namespace SoundBoard
 		private const string NewPattern = "^[0-2]\\|[0-1]\\|";
 		private bool OnlyFavorite = false;
 
-
 		private delegate void _ClickDelegate(object sender, TreeNodeMouseClickEventArgs args);
 
 		private void ClickNode(TreeNode node)
 		{
 			Invoke(new _ClickDelegate(List_NodeMouseDoubleClick), null, new TreeNodeMouseClickEventArgs(node, MouseButtons.Left, 2, 0, 0));
 		}
-
-
 
 		private ServerSettings ServerSettings { get; set; } = new ServerSettings()
 		{
@@ -59,8 +56,6 @@ namespace SoundBoard
 					CustomFilesLocation = key.GetValue("CustomFilesLocation").ToString() == "1" ? true : false
 				};
 			}
-//#if DEBUG
-//#endif
 			var root = List.Nodes.Add("SoundBoard", "SoundBoard");
 			root.Tag = new MainNodeTag();
 			root.ImageIndex = 0;
@@ -306,7 +301,7 @@ namespace SoundBoard
 					actualNode.Tag = (type == "0" ? new MainNodeTag() :
 						(type == "1" ? new DirTag() { Favorite = favorite } :
 						(type == "2" ? new NodeTag() { Path = soundPath, Playing = false, Favorite = favorite } : new object())));
-					actualNode.ForeColor = favorite ? System.Drawing.Color.DarkGreen : System.Drawing.Color.Black;
+					actualNode.ForeColor = favorite ? Color.DarkGreen : Color.Black;
 					actualNode.ImageIndex = actualNode.SelectedImageIndex = (type == "2" ? 1 : 0);
 				}
 
@@ -651,7 +646,6 @@ namespace SoundBoard
 					{
 						var cnode = CloneNode(node);
 						(cnode.Tag as NodeTag).FavoritePath = node.FullPath;
-						//parent.Nodes.Add(cnode);
 						if (nodeTag.Favorite) Favorites.Nodes.Add(CloneNode(cnode));
 					}
 				}
@@ -729,12 +723,10 @@ namespace SoundBoard
 					List<string> entries = new List<string>();
 					if (!(anode.Tag is MainNodeTag))
 						entries.Add(getNodeJSON(prevPath, "", false, true, false, false));
-						//entries.Add($"{{\"id\":\"{prevPath.Replace("\\", "/")}\", \"title\":\"\", \"isPlaying\":\"false\", \"isBack\":\"true\", \"isFavorite\":\"{(anode.Tag is IFavorite f ? f.Favorite.ToString().ToLower() : "false")}\"}}");
 
 					foreach (TreeNode node in anode.Nodes)
 					{
 						entries.Add(getNodeJSON(node.FullPath, node.Text, ((node.Tag as NodeTag)?.Playing ?? false), false, (node.Tag is IFavorite f ? f.Favorite : false), node.Tag is DirTag));
-						//entries.Add($"{{\"id\":\"{node.FullPath.Replace("\\", "/")}\", \"title\":\"{node.Text}\", \"isPlaying\":\"{((node.Tag as NodeTag)?.Playing ?? false).ToString().ToLower()}\", \"isBack\":\"false\", \"isFavorite\":\"{(node.Tag is IFavorite f ? f.Favorite.ToString().ToLower() : "false")}\"}}");
 					}
 					var str = string.Join(", ", entries);
 					response += str + "]}";
@@ -760,12 +752,10 @@ namespace SoundBoard
 
 				if (!(anode.Tag is MainNodeTag))
 					entries.Add(getNodeJSON(prevPath, "", false, true, false, false));
-					//entries.Add($"{{\"id\":\"{prevPath.Replace("\\", "/")}\", \"title\":\"\", \"isPlaying\":\"false\", \"isBack\":\"true\", \"isFavorite\":\"{(anode.Tag is IFavorite f ? f.Favorite.ToString().ToLower() : "false")}\"}}");
 
 				foreach (TreeNode node in anode.Nodes)
 				{
 					entries.Add(getNodeJSON(node.FullPath, node.Text, ((node.Tag as NodeTag)?.Playing ?? false), false, (node.Tag is IFavorite f ? f.Favorite : false), node.Tag is DirTag));
-					//entries.Add($"{{\"id\":\"{node.FullPath.Replace("\\", "/")}\", \"title\":\"{node.Text}\", \"isPlaying\":\"{((node.Tag as NodeTag)?.Playing ?? false).ToString().ToLower()}\", \"isBack\":\"false\", \"isFavorite\":\"{(node.Tag is IFavorite f ? f.Favorite.ToString().ToLower() : "false")}\"}}");
 				}
 
 				var str = string.Join(", ", entries);
@@ -819,7 +809,7 @@ namespace SoundBoard
 			if (List.SelectedNode.Tag is IFavorite favorite)
 			{
 				favorite.Favorite = !favorite.Favorite;
-				List.SelectedNode.ForeColor = favorite.Favorite ? System.Drawing.Color.Green : System.Drawing.Color.Black;
+				List.SelectedNode.ForeColor = favorite.Favorite ? Color.Green : Color.Black;
 				CheckFavorites();
 			}
 		}
@@ -835,21 +825,6 @@ namespace SoundBoard
 				setFavoriteToolStripMenuItem.Text = favorite.Favorite ? "Remove Favorite" : "Set Favorite";
 				setFavoriteToolStripMenuItem1.Text = favorite.Favorite ? "Remove Favorite" : "Set Favorite";
 			}
-		}
-	}
-
-	internal class FavoritesComparer : System.Collections.IComparer
-	{
-		public Int32 Compare(object tx, object ty)
-		{
-			TreeNode x = (TreeNode) tx;
-			TreeNode y = (TreeNode) ty;
-
-			if (x.Tag is DirTag && y.Tag is NodeTag) return -1;
-			else if (x.Tag is NodeTag && y.Tag is DirTag) return 1;
-			else if (x.Tag is NodeTag && y.Tag is NodeTag) return x.Name.CompareTo(y.Name);
-			else if (x.Tag is DirTag && y.Tag is DirTag) return x.Name.CompareTo(y.Name);
-			else return 0;
 		}
 	}
 }
