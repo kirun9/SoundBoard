@@ -4,10 +4,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows.Forms;
 using WMPLib;
@@ -24,7 +24,6 @@ namespace SoundBoard
 		private string ActualServerPath = "SoundBoard";
 		private string FavoritePath = "!favorite!";
 		private TreeView FavoritesList;
-		private const string NewPattern = "^[0-2]\\|[0-1]\\|";
 		private bool OnlyFavorite = false;
 
 		private delegate void _ClickDelegate(object sender, TreeNodeMouseClickEventArgs args);
@@ -44,6 +43,17 @@ namespace SoundBoard
 
 		public Form1()
 		{
+			startup();
+		}
+
+		public Form1(string path)
+		{
+			startup();
+			openFile(path);
+		}
+
+		private void startup()
+		{
 			InitializeComponent();
 			RegistryKey key = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Soundboard");
 			if (key != null)
@@ -52,7 +62,7 @@ namespace SoundBoard
 				{
 					Port = UInt16.Parse(key.GetValue("Port").ToString()),
 					FilesLocation = key.GetValue("FilesLocation").ToString(),
-					LocalHostOnly = key.GetValue("LocalHostOnly").ToString() == "1" ? true : false ,
+					LocalHostOnly = key.GetValue("LocalHostOnly").ToString() == "1" ? true : false,
 					CustomFilesLocation = key.GetValue("CustomFilesLocation").ToString() == "1" ? true : false
 				};
 			}
@@ -221,7 +231,15 @@ namespace SoundBoard
 
 				output += $"{tagType}|{favorite}|{node.FullPath}|{(path)}\n";
 			}
-			File.WriteAllText(Path, output);
+
+			var outputArray = Convert.ToBase64String(Encoding.UTF8.GetBytes(output.ToCharArray())).ToCharArray();
+
+			using (GZipStream stream = new GZipStream(File.OpenWrite(Path), CompressionLevel.Optimal)) {
+				foreach (var c in outputArray)
+				{
+					stream.WriteByte((byte)c);
+				}
+			}
 		}
 
 		private void saveAsToolStripMenuItem_Click(Object sender, EventArgs e)
@@ -244,12 +262,78 @@ namespace SoundBoard
 			}
 		}
 
-		private void openToolStripMenuItem_Click(Object sender, EventArgs e)
+		private void openFile(string path)
 		{
+			Path = path;
+
 			TreeNode AddNode(TreeNode node, string key)
 			{
 				return node.Nodes.ContainsKey(key) ? node.Nodes[key] : node.Nodes.Add(key, key);
 			}
+
+			Text = System.IO.Path.GetFileNameWithoutExtension(Path);
+
+			string readedBase64 = "";
+			using (GZipStream stream = new GZipStream(File.OpenRead(Path), CompressionMode.Decompress))
+			{
+				int i;
+				while ((i = stream.ReadByte()) != -1)
+				{
+					readedBase64 += (char)i;
+				}
+			}
+
+			var outputArray = Encoding.UTF8.GetChars(Convert.FromBase64String(readedBase64));
+
+			string readed = "";
+
+			foreach (var b in outputArray)
+			{
+				readed += (char)b;
+			}
+			readed = readed.Replace("\r\n", "\n").Replace("\r", "\n");
+
+			string[] lines = readed.Split(new char[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
+
+			var root = new TreeNode();
+			TreeNode actualNode;
+
+			foreach (var line in lines)
+			{
+				actualNode = root;
+				var splitted = line.Split('|');
+
+				string type = splitted[0];
+				bool favorite = (splitted[1] == "1" ? true : false);
+				string tagPath = splitted[2];
+				string soundPath = splitted[3];
+
+				foreach (var pathPart in tagPath.Split('\\'))
+				{
+					actualNode = AddNode(actualNode, pathPart);
+				}
+				actualNode.Tag = (type == "0" ? new MainNodeTag() :
+					(type == "1" ? new DirTag() { Favorite = favorite } :
+					(type == "2" ? new NodeTag() { Path = soundPath, Playing = false, Favorite = favorite } : new object())));
+				actualNode.ForeColor = favorite ? Color.DarkGreen : Color.Black;
+				actualNode.ImageIndex = actualNode.SelectedImageIndex = (type == "2" ? 1 : 0);
+			}
+
+			List.Nodes.Clear();
+			foreach (TreeNode node in root.Nodes)
+			{
+				List.Nodes.Add(node);
+			}
+			actionToolStripMenuItem.Enabled = true;
+			List.Enabled = true;
+			saveAsToolStripMenuItem.Enabled = true;
+			saveToolStripMenuItem.Enabled = true;
+			CheckFavorites();
+		}
+
+		private void openToolStripMenuItem_Click(Object sender, EventArgs e)
+		{
+			
 
 			OpenFileDialog dialog = new OpenFileDialog();
 			dialog.DefaultExt = "sbl";
@@ -262,59 +346,7 @@ namespace SoundBoard
 			dialog.FilterIndex = 0;
 			if (dialog.ShowDialog() == DialogResult.OK)
 			{
-				Path = dialog.FileName;
-				Text = System.IO.Path.GetFileNameWithoutExtension(Path);
-				
-				string[] lines = File.ReadAllLines(Path);
-
-				var root = new TreeNode();
-				TreeNode actualNode;
-
-				foreach (var line in lines)
-				{
-					actualNode = root;
-					var splitted = line.Split('|');
-					string type;
-					string tagPath;
-					string soundPath;
-					bool favorite;
-
-					if (Regex.IsMatch(line, NewPattern))
-					{
-						type = splitted[0];
-						favorite = (splitted[1] == "1" ? true : false);
-						tagPath = splitted[2];
-						soundPath = splitted[3];
-					}
-					else
-					{
-						tagPath = splitted[0];
-						type = splitted[1];
-						soundPath = splitted[2];
-						favorite = (splitted.Length > 3 ? (splitted[3] == "1" ? true : false) : false);
-					}
-
-					foreach (var pathPart in tagPath.Split('\\'))
-					{
-						actualNode = AddNode(actualNode, pathPart);
-					}
-					actualNode.Tag = (type == "0" ? new MainNodeTag() :
-						(type == "1" ? new DirTag() { Favorite = favorite } :
-						(type == "2" ? new NodeTag() { Path = soundPath, Playing = false, Favorite = favorite } : new object())));
-					actualNode.ForeColor = favorite ? Color.DarkGreen : Color.Black;
-					actualNode.ImageIndex = actualNode.SelectedImageIndex = (type == "2" ? 1 : 0);
-				}
-
-				List.Nodes.Clear();
-				foreach (TreeNode node in root.Nodes)
-				{
-					List.Nodes.Add(node);
-				}
-				actionToolStripMenuItem.Enabled = true;
-				List.Enabled = true;
-				saveAsToolStripMenuItem.Enabled = true;
-				saveToolStripMenuItem.Enabled = true;
-				CheckFavorites();
+				openFile(dialog.FileName);
 			}
 		}
 
