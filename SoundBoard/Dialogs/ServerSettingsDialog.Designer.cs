@@ -146,6 +146,7 @@
 			this._filesLocation.Name = "_filesLocation";
 			this._filesLocation.Size = new System.Drawing.Size(272, 20);
 			this._filesLocation.TabIndex = 12;
+			this._filesLocation.TextChanged += new System.EventHandler(this._filesLocation_TextChanged);
 			// 
 			// PlaceFiles
 			// 
@@ -181,7 +182,7 @@
 			this.MinimizeBox = false;
 			this.Name = "ServerSettingsDialog";
 			this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
-			this.Text = "ServerSettings";
+			this.Text = "Server Settings";
 			((System.ComponentModel.ISupportInitialize)(this._portNumber)).EndInit();
 			this.ResumeLayout(false);
 			this.PerformLayout();

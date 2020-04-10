@@ -9,6 +9,7 @@
 		public static readonly MimeType Html = new MimeType("text/html", new string[] { ".htm", ".html" });
 		public static readonly MimeType Css = new MimeType("text/css", new string[] { ".css" });
 		public static readonly MimeType JavaScript = new MimeType("text/javascript", new string[] { ".js" });
+		public static readonly MimeType JSON = new MimeType("application/json", new string[] { ".json" });
 
 		public static MimeType[] SupportedMimeTypes =
 		{
@@ -16,6 +17,7 @@
 			Html,
 			Css,
 			JavaScript,
+			JSON,
 			new MimeType("image/bmp",           new string[] { ".bmp" }),
 			new MimeType("image/gif",           new string[] { ".gif" }),
 			new MimeType("image/x-icon",        new string[] { ".ico", ".cur" }),
@@ -24,7 +26,6 @@
 			new MimeType("image/svg+xml",       new string[] { ".svg" }),
 			new MimeType("image/webp",          new string[] { ".webp" }),
 			new MimeType("text/acc",            new string[] { ".acc" }),
-			new MimeType("application/json",    new string[] { ".json" }),
 			new MimeType("application/ld+json", new string[] { ".jsonld" }),
 			new MimeType("application/rtf",     new string[] { ".rtf" }),
 			new MimeType("font/ttf",            new string[] { ".ttf" }),

@@ -9,6 +9,7 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading;
+using System.WinApi;
 using System.Windows.Forms;
 using WMPLib;
 
@@ -17,7 +18,7 @@ namespace SoundBoard
 {
 	public partial class Form1 : Form
 	{
-		private List<WindowsMediaPlayer> players = new List<WindowsMediaPlayer>();
+		private List<TreeNode> players = new List<TreeNode>();
 		private string Path;
 		private HttpListener listener;
 		private Thread serverThread;
@@ -89,12 +90,21 @@ namespace SoundBoard
 			dialog.Filter = "Sound Board List | *.sbl";
 			if (dialog.ShowDialog() == DialogResult.OK)
 			{
-				using (StreamWriter writer = new StreamWriter(dialog.OpenFile())) { };
 				Path = dialog.FileName;
 				Text = System.IO.Path.GetFileNameWithoutExtension(Path);
-				actionToolStripMenuItem.Enabled = true;
+
 				List.Nodes.Clear();
 				List.Enabled = true;
+
+				var root = List.Nodes.Add("SoundBoard", "SoundBoard");
+				root.Tag = new MainNodeTag();
+				root.ImageIndex = 0;
+				root.SelectedImageIndex = 0;
+				List.SelectedNode = List.Nodes[0];
+
+				saveToolStripMenuItem_Click(sender, e);
+
+				actionToolStripMenuItem.Enabled = true;
 				saveAsToolStripMenuItem.Enabled = true;
 				saveToolStripMenuItem.Enabled = true;
 			}
@@ -103,6 +113,7 @@ namespace SoundBoard
 		private void exitToolStripMenuItem_Click(Object sender, EventArgs e)
 		{
 			stopToolStripMenuItem_Click(null, null);
+
 			Environment.ExitCode = 0;
 			Application.Exit();
 		}
@@ -148,40 +159,49 @@ namespace SoundBoard
 		private void List_NodeMouseDoubleClick(Object sender, TreeNodeMouseClickEventArgs e)
 		{
 			if (e.Button == MouseButtons.Left) {
-				if (e.Node.Tag is NodeTag)
+				if (e.Node.Tag is NodeTag nodeTag)
 				{
-					var url = (e.Node.Tag as NodeTag)?.Path ?? "";
-					var _players = players.Where((p) => { return p.URL == url; });
+					var url = nodeTag.Path ?? "";
+					var _players = players.Where((p) => { return p.FullPath == e.Node.FullPath; });
 					if (_players.Count() > 0)
 					{
 						foreach (var player in _players)
 						{
-							player.controls.stop();
-							player.controls.pause();
+							var t = player.Tag as NodeTag;
+							t.Player.controls.stop();
+							t.Player.controls.pause();
 						}
 						e.Node.ImageIndex = e.Node.SelectedImageIndex = 1;
-						players.RemoveAll((p) => { return p.URL == url && p.playState == WMPPlayState.wmppsStopped; });
+						players.RemoveAll((p) => { return p.FullPath == e.Node.FullPath; });
 					}
 					else
 					{
 						var player = new WindowsMediaPlayer();
 						player.URL = url;
-						player.controls.play();
-						players.Add(player);
-						var tag = e.Node.Tag as NodeTag;
+						player.settings.volume = nodeTag.PlaybackSettings.Volume;
+						player.controls.currentPosition = nodeTag.PlaybackSettings.StartPos;
+						if (nodeTag.PlaybackSettings.Repeat) player.settings.setMode("loop", true);
+
+						nodeTag.Player = player;
+						e.Node.Tag = nodeTag;
+						players.Add(e.Node);
 						player.PlayStateChange += (state) =>
 						{
 							if ((WMPPlayState)state == WMPPlayState.wmppsStopped)
 							{
 								e.Node.ImageIndex = e.Node.SelectedImageIndex = 1;
-								
-								tag.Playing = false;
-								e.Node.Tag = tag;
+								nodeTag.Playing = false;
+								e.Node.Tag = nodeTag;
+							}
+							else if ((WMPPlayState)state == WMPPlayState.wmppsPlaying)
+							{
+								e.Node.ImageIndex = e.Node.SelectedImageIndex = 2;
+								nodeTag.Playing = true;
+								e.Node.Tag = nodeTag;
 							}
 						};
-						e.Node.ImageIndex = e.Node.SelectedImageIndex = 2;
-						tag.Playing = true;
-						e.Node.Tag = tag;
+
+						player.controls.play();
 					}
 				}
 			}
@@ -228,8 +248,11 @@ namespace SoundBoard
 				var favorite = (node.Tag is NodeTag nodeTag ? (nodeTag.Favorite ? "1" : "0") : (node.Tag is DirTag dirTag ? (dirTag.Favorite ? "1" : "0") : "0"));
 				var tagType = (node.Tag is MainNodeTag ? "0" : (node.Tag is DirTag ? "1" : (node.Tag is NodeTag ? "2" : "")));
 				var path = (node.Tag is NodeTag tag ? tag.Path : "");
+				var repeat = (node.Tag as NodeTag)?.PlaybackSettings?.Repeat ?? false ? 1 : 0;
+				var volume = (node.Tag as NodeTag)?.PlaybackSettings.Volume ?? 0;
+				var startPos = (node.Tag as NodeTag)?.PlaybackSettings.StartPos ?? 0;
 
-				output += $"{tagType}|{favorite}|{node.FullPath}|{(path)}\n";
+				output += $"{tagType}|{favorite}|{node.FullPath}|{path}|{repeat}|{volume}|{startPos}\n";
 			}
 
 			var outputArray = Convert.ToBase64String(Encoding.UTF8.GetBytes(output.ToCharArray())).ToCharArray();
@@ -303,10 +326,18 @@ namespace SoundBoard
 				actualNode = root;
 				var splitted = line.Split('|');
 
+				var settings = new PlaybackSettings();
+
 				string type = splitted[0];
 				bool favorite = (splitted[1] == "1" ? true : false);
 				string tagPath = splitted[2];
 				string soundPath = splitted[3];
+				if (splitted.Length >= 7)
+				{
+					settings.Repeat = (splitted[4] == "1" ? true : false);
+					settings.Volume = Int32.Parse(splitted[5]);
+					settings.StartPos = Double.Parse(splitted[6]);
+				}
 
 				foreach (var pathPart in tagPath.Split('\\'))
 				{
@@ -314,7 +345,7 @@ namespace SoundBoard
 				}
 				actualNode.Tag = (type == "0" ? new MainNodeTag() :
 					(type == "1" ? new DirTag() { Favorite = favorite } :
-					(type == "2" ? new NodeTag() { Path = soundPath, Playing = false, Favorite = favorite } : new object())));
+					(type == "2" ? new NodeTag() { Path = soundPath, Playing = false, Favorite = favorite, PlaybackSettings = settings } : new object())));
 				actualNode.ForeColor = favorite ? Color.DarkGreen : Color.Black;
 				actualNode.ImageIndex = actualNode.SelectedImageIndex = (type == "2" ? 1 : 0);
 			}
@@ -354,7 +385,8 @@ namespace SoundBoard
 		{
 			foreach (var player in players)
 			{
-				player.controls.pause();
+				var tag = player.Tag as NodeTag;
+				tag.Player.controls.pause();
 			}
 			players.Clear();
 		}
@@ -453,8 +485,15 @@ namespace SoundBoard
 
 		private void contextMenuStrip1_Opening(Object sender, System.ComponentModel.CancelEventArgs e)
 		{
-			editToolStripMenuItem.Visible = List.SelectedNode.Tag is MainNodeTag;
-			editToolStripMenuItem.Enabled = List.SelectedNode.Tag is MainNodeTag;
+			editToolStripMenuItem.Visible = !(List.SelectedNode.Tag is MainNodeTag);
+			editToolStripMenuItem1.Visible = !(List.SelectedNode.Tag is MainNodeTag);
+			editToolStripMenuItem.Enabled = !(List.SelectedNode.Tag is MainNodeTag);
+			editToolStripMenuItem1.Enabled = !(List.SelectedNode.Tag is MainNodeTag);
+
+			settingsToolStripMenuItem.Visible = (List.SelectedNode.Tag is NodeTag);
+			settingsToolStripMenuItem1.Visible = (List.SelectedNode.Tag is NodeTag);
+			settingsToolStripMenuItem.Enabled = (List.SelectedNode.Tag is NodeTag);
+			settingsToolStripMenuItem1.Enabled = (List.SelectedNode.Tag is NodeTag);
 
 			if (List.SelectedNode.Tag is IFavorite favorite)
 			{
@@ -523,6 +562,8 @@ namespace SoundBoard
 					while (listener.IsListening)
 					{
 						var context = listener.GetContext();
+						context.Response.Headers.Add("Access-Control-Allow-Origin", "*");
+						context.Response.Headers.Add("Access-Control-Allow-Methods", "POST, GET");
 						string webFilePath = ((context.Request.Url.AbsolutePath.Substring(1) ?? "") == "")? "index.html" : context.Request.Url.AbsolutePath.Substring(1);
 						try
 						{
@@ -530,10 +571,16 @@ namespace SoundBoard
 							{
 								if (webFilePath == "status.html")
 								{
-									context.Response.ContentType = MimeType.GetMimeType(".json");
+									context.Response.ContentType = MimeType.JSON;
 									writer.Write(createStatus());
 								}
-								else if (webFilePath == "change.html") {
+								else if (webFilePath == "playing.html")
+								{
+									context.Response.ContentType = MimeType.JSON;
+									writer.Write(getNowPlaying());
+								}
+								else if (webFilePath == "change.html")
+								{
 									string requestBody;
 									using (Stream reciveStream = context.Request.InputStream)
 									{
@@ -544,7 +591,9 @@ namespace SoundBoard
 									}
 									parseRequest(requestBody);
 								}
-								else { if (!ServerSettings.CustomFilesLocation)
+								else
+								{
+									if (!ServerSettings.CustomFilesLocation)
 									{
 										if (webFilePath == "index.html")
 										{
@@ -582,8 +631,8 @@ namespace SoundBoard
 											var path = System.IO.Path.Combine(ServerSettings.FilesLocation, webFilePath);
 											var ext = System.IO.Path.GetExtension(path);
 											var bytes = File.ReadAllBytes(path);
-											writer.Write("Content-Type: " + MimeType.GetMimeType(ext) + "\r\n");
-											writer.Write("Content-Length: " + bytes.Length + "\r\n");
+											context.Response.ContentType = MimeType.GetMimeType(ext);
+											context.Response.ContentLength64 = bytes.Length;
 											writer.BaseStream.Write(bytes, 0, bytes.Length);
 										}
 										catch (FileNotFoundException)
@@ -627,10 +676,9 @@ namespace SoundBoard
 							context.Response.StatusCode = 500;
 							context.Response.Close();
 						}
-
 					}
 				}
-				catch (HttpListenerException ex) when (ex.ErrorCode == 995)
+				catch (HttpListenerException ex) when (ex.ErrorCode == WinError.ERROR_OPERATION_ABORTED)
 				{
 
 				}
@@ -670,7 +718,7 @@ namespace SoundBoard
 
 			Favorites.Nodes.Clear();
 
-			void checkNode2(TreeNode node, TreeNode parent, bool forceAdd = false)
+			void checkNode(TreeNode node, TreeNode parent, bool forceAdd = false)
 			{
 				if (node.Tag is NodeTag nodeTag)
 				{
@@ -692,14 +740,14 @@ namespace SoundBoard
 
 						foreach (TreeNode n in node.Nodes)
 						{
-							checkNode2(n, cnode, true);
+							checkNode(n, cnode, true);
 						}
 					}
 					else
 					{
 						foreach (TreeNode n in node.Nodes)
 						{
-							checkNode2(n, parent, false);
+							checkNode(n, parent, false);
 						}
 					}
 				}
@@ -707,30 +755,44 @@ namespace SoundBoard
 				{
 					foreach (TreeNode n in node.Nodes)
 					{
-						checkNode2(n, parent, forceAdd);
+						checkNode(n, parent, forceAdd);
 					}
 				}
 			}
-			checkNode2(List.Nodes[0], Favorites);
+			checkNode(List.Nodes[0], Favorites);
 
+		}
+
+		private string getNodeJSON(string path, string title, bool isPlaying, bool isBack, bool isFavorite, bool isDir)
+		{
+			var ret = "{";
+			ret += "\"id\":\"" + path.Replace("\\", "/") + "\", ";
+			ret += "\"title\":\"" + title + "\", ";
+			ret += "\"isPlaying\":\"" + isPlaying.ToString().ToLower() + "\", ";
+			ret += "\"isBack\":\"" + isBack.ToString().ToLower() + "\", ";
+			ret += "\"isFavorite\":\"" + isFavorite.ToString().ToLower() + "\", ";
+			ret += "\"isDir\":\"" + isDir.ToString().ToLower() + "\"";
+			ret += "}";
+			return ret;
+		}
+
+		private string getNowPlaying()
+		{
+			string response = "{";
+			response += "\"count\":\"" + players.Count + "\"";
+			response += "\"players\":[" ;
+
+			List<string> entries = players.ConvertAll<string>((node) => {
+				return getNodeJSON(node.FullPath, node.Text, ((node.Tag as NodeTag)?.Playing ?? false), false, (node.Tag is IFavorite f ? f.Favorite : false), false);
+			});
+
+			var str = string.Join(", ", entries);
+			response += str + "]}";
+			return response;
 		}
 
 		private string createStatus()
 		{
-			string getNodeJSON(string path, string title, bool isPlaying, bool isBack, bool isFavorite, bool isDir)
-			{
-				var ret = "{";
-				ret += "\"id\":\"" + path.Replace("\\", "/") + "\", ";
-				ret += "\"title\":\"" + title + "\", ";
-				ret += "\"isPlaying\":\"" + isPlaying.ToString().ToLower() + "\", ";
-				ret += "\"isBack\":\"" + isBack.ToString().ToLower() +"\", ";
-				ret += "\"isFavorite\":\"" + isFavorite.ToString().ToLower() +"\", ";
-				ret += "\"isDir\":\"" + isDir.ToString().ToLower() +"\"";
-				ret += "}";
-				return ret;
-			}
-
-
 			if (OnlyFavorite)
 			{
 				if (!((FavoritesList?.Nodes?.Count ?? 0) > 0))
@@ -830,8 +892,9 @@ namespace SoundBoard
 
 		private void stopToolStripMenuItem_Click(Object sender, EventArgs e)
 		{
-			listener?.Abort();
-			serverThread?.Abort();
+			listener?.Stop();
+			listener?.Close();
+
 			stopToolStripMenuItem.Enabled = false;
 			startToolStripMenuItem.Enabled = true;
 		}
@@ -856,6 +919,26 @@ namespace SoundBoard
 				setFavoriteToolStripMenuItem1.Enabled = true;
 				setFavoriteToolStripMenuItem.Text = favorite.Favorite ? "Remove Favorite" : "Set Favorite";
 				setFavoriteToolStripMenuItem1.Text = favorite.Favorite ? "Remove Favorite" : "Set Favorite";
+			}
+		}
+
+		private void Form1_FormClosed(Object sender, FormClosedEventArgs e)
+		{
+			exitToolStripMenuItem_Click(null, null);
+		}
+
+		private void settingsToolStripMenuItem1_Click(Object sender, EventArgs e)
+		{
+			PlaybackSettingsDialog dialog = new PlaybackSettingsDialog(List.SelectedNode);
+			
+			var tag = List.SelectedNode.Tag as NodeTag;
+
+			if (dialog.ShowDialog() == DialogResult.OK)
+			{
+				tag.PlaybackSettings.Repeat = dialog.LoopPlayback;
+				tag.PlaybackSettings.Volume = dialog.Volume;
+				tag.PlaybackSettings.StartPos = dialog.StartPos;
+				List.SelectedNode.Tag = tag;
 			}
 		}
 	}

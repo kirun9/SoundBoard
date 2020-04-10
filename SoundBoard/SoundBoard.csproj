@@ -67,6 +67,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Dialogs\PlaybackSettingsDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Dialogs\PlaybackSettingsDialog.Designer.cs">
+      <DependentUpon>PlaybackSettingsDialog.cs</DependentUpon>
+    </Compile>
     <Compile Include="DirTag.cs" />
     <Compile Include="FavoritesComparer.cs" />
     <Compile Include="Form1.cs">
@@ -76,46 +82,51 @@
       <DependentUpon>Form1.cs</DependentUpon>
     </Compile>
     <Compile Include="IFavorite.cs" />
-    <Compile Include="ImportFilesDialog.cs">
+    <Compile Include="Dialogs\ImportFilesDialog.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="ImportFilesDialog.Designer.cs">
+    <Compile Include="Dialogs\ImportFilesDialog.Designer.cs">
       <DependentUpon>ImportFilesDialog.cs</DependentUpon>
     </Compile>
-    <Compile Include="ItemDialog.cs">
+    <Compile Include="Dialogs\ItemDialog.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="ItemDialog.Designer.cs">
+    <Compile Include="Dialogs\ItemDialog.Designer.cs">
       <DependentUpon>ItemDialog.cs</DependentUpon>
     </Compile>
     <Compile Include="MainNodeTag.cs" />
     <Compile Include="MimeType.cs" />
-    <Compile Include="NodeDialog.cs">
+    <Compile Include="Dialogs\NodeDialog.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="NodeDialog.Designer.cs">
+    <Compile Include="Dialogs\NodeDialog.Designer.cs">
       <DependentUpon>NodeDialog.cs</DependentUpon>
     </Compile>
     <Compile Include="NodeTag.cs" />
+    <Compile Include="PlaybackSettings.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ServerSettings.cs" />
-    <Compile Include="ServerSettingsDialog.cs">
+    <Compile Include="Dialogs\ServerSettingsDialog.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="ServerSettingsDialog.Designer.cs">
+    <Compile Include="Dialogs\ServerSettingsDialog.Designer.cs">
       <DependentUpon>ServerSettingsDialog.cs</DependentUpon>
     </Compile>
+    <Compile Include="WinError.cs" />
+    <EmbeddedResource Include="Dialogs\PlaybackSettingsDialog.resx">
+      <DependentUpon>PlaybackSettingsDialog.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Form1.resx">
       <DependentUpon>Form1.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="ImportFilesDialog.resx">
+    <EmbeddedResource Include="Dialogs\ImportFilesDialog.resx">
       <DependentUpon>ImportFilesDialog.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="ItemDialog.resx">
+    <EmbeddedResource Include="Dialogs\ItemDialog.resx">
       <DependentUpon>ItemDialog.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="NodeDialog.resx">
+    <EmbeddedResource Include="Dialogs\NodeDialog.resx">
       <DependentUpon>NodeDialog.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
@@ -128,7 +139,7 @@
       <DependentUpon>Resources.resx</DependentUpon>
       <DesignTime>True</DesignTime>
     </Compile>
-    <EmbeddedResource Include="ServerSettingsDialog.resx">
+    <EmbeddedResource Include="Dialogs\ServerSettingsDialog.resx">
       <DependentUpon>ServerSettingsDialog.cs</DependentUpon>
     </EmbeddedResource>
     <None Include="Properties\Settings.settings">

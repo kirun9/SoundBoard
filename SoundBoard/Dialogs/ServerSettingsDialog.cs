@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -25,7 +26,13 @@ namespace SoundBoard
 
 		private void PlaceFiles_Click(Object sender, EventArgs e)
 		{
-
+			if (CustomFilesLocation && FilesLocation != "")
+			{
+				File.WriteAllText(Path.Combine(FilesLocation, "index.html"), Properties.Resources.index);
+				File.WriteAllText(Path.Combine(FilesLocation, "navbar.css"), Properties.Resources.navbar);
+				File.WriteAllText(Path.Combine(FilesLocation, "script.js"), Properties.Resources.script);
+				File.WriteAllText(Path.Combine(FilesLocation, "soundboard.css"), Properties.Resources.soundboard);
+			}
 		}
 
 		private void FileSelectButton_Click(Object sender, EventArgs e)
@@ -36,13 +43,19 @@ namespace SoundBoard
 			if (dialog.ShowDialog() == DialogResult.OK)
 			{
 				_filesLocation.Text = dialog.SelectedPath;
+				PlaceFiles.Enabled = _filesLocation.Text.Length > 0 && _customFileLocation.Checked;
 			}
 		}
 
 		private void _customFileLocation_CheckedChanged(Object sender, EventArgs e)
 		{
 			_filesLocation.Enabled = FileSelectButton.Enabled = PlaceFiles.Enabled = _customFileLocation.Checked;
-			PlaceFiles.Enabled = false;
+			PlaceFiles.Enabled = _filesLocation.Text.Length > 0 && _customFileLocation.Checked;
+		}
+
+		private void _filesLocation_TextChanged(Object sender, EventArgs e)
+		{
+			PlaceFiles.Enabled = _filesLocation.Text.Length > 0 && _customFileLocation.Checked;
 		}
 	}
 }

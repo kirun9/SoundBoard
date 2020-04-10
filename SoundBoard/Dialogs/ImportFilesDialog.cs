@@ -40,17 +40,19 @@ namespace SoundBoard
 			{
 				FilePaths.Lines = dialog.FileNames;
 				NodeName.Text = System.IO.Path.GetDirectoryName(dialog.FileName);
+
+				OkButton.Enabled = FilePaths.Text.Length > 0 && ((NodeName.Text.Length > 0 && checkBox1.Checked) || !checkBox1.Checked);
 			}
 		}
 
 		private void FilePaths_TextChanged(Object sender, EventArgs e)
 		{
-			OkButton.Enabled = FilePaths.Text.Length > 0 && (NodeName.Text.Length > 0 && checkBox1.Checked);
+			OkButton.Enabled = FilePaths.Text.Length > 0 && ((NodeName.Text.Length > 0 && checkBox1.Checked) || !checkBox1.Checked);
 		}
 
 		private void NodeName_TextChanged(Object sender, EventArgs e)
 		{
-			OkButton.Enabled = FilePaths.Text.Length > 0 && (NodeName.Text.Length > 0 && checkBox1.Checked);
+			OkButton.Enabled = FilePaths.Text.Length > 0 && ((NodeName.Text.Length > 0 && checkBox1.Checked) || !checkBox1.Checked);
 		}
 	}
 }
