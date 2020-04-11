@@ -761,7 +761,7 @@ namespace SoundBoard
 
 		}
 
-		private string getNodeJSON(string path, string title, bool isPlaying, bool isBack, bool isFavorite, bool isDir)
+		private string getNodeJSON(string path, string title, bool isPlaying, bool isBack, bool isFavorite, bool isDir, string filePath = null)
 		{
 			var ret = "{";
 			ret += "\"id\":\"" + path.Replace("\\", "/") + "\", ";
@@ -770,6 +770,7 @@ namespace SoundBoard
 			ret += "\"isBack\":\"" + isBack.ToString().ToLower() + "\", ";
 			ret += "\"isFavorite\":\"" + isFavorite.ToString().ToLower() + "\", ";
 			ret += "\"isDir\":\"" + isDir.ToString().ToLower() + "\"";
+			if (filePath != null) ret += ", \"filePath\":\"" + filePath + "\"";
 			ret += "}";
 			return ret;
 		}
@@ -781,7 +782,7 @@ namespace SoundBoard
 			response += "\"players\":[" ;
 
 			List<string> entries = players.ConvertAll<string>((node) => {
-				return getNodeJSON(node.FullPath, node.Text, ((node.Tag as NodeTag)?.Playing ?? false), false, (node.Tag is IFavorite f ? f.Favorite : false), false);
+				return getNodeJSON(node.FullPath, node.Text, ((node.Tag as NodeTag)?.Playing ?? false), false, (node.Tag is IFavorite f ? f.Favorite : false), false, (node.Tag as NodeTag)?.Path);
 			});
 
 			var str = string.Join(", ", entries);
