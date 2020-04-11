@@ -19,9 +19,6 @@ namespace SoundBoard
 		public int Volume { get => _volume.Value; set => _volume.Value = value; }
 		public bool LoopPlayback { get => _loopPlayback.Checked; set => _loopPlayback.Checked = value; }
 		public double StartPos { get => (_startPos.Value / 1000D); set => _startPos.Value = (int)(value * 1000); }
-
-		Thread mediaThread;
-
 		private TreeNode Node;
 
 		public PlaybackSettingsDialog(TreeNode node)
@@ -66,8 +63,8 @@ namespace SoundBoard
 			if (Visible)
 			{
 				var tag = Node.Tag as NodeTag;
-				if (LoopPlayback) tag.Player.settings.setMode("loop", true);
-				tag.Player.settings.volume = Volume;
+				if (tag.Player != null) if (LoopPlayback) tag.Player.settings.setMode("loop", true);
+				if (tag.Player != null) tag.Player.settings.volume = Volume;
 			}
 		}
 
@@ -76,7 +73,7 @@ namespace SoundBoard
 			if (Visible)
 			{
 				var tag = Node.Tag as NodeTag;
-				tag.Player.settings.volume = Volume;
+				if (tag.Player != null) tag.Player.settings.volume = Volume;
 			}
 		}
 

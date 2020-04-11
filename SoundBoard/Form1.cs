@@ -777,7 +777,7 @@ namespace SoundBoard
 		private string getNowPlaying()
 		{
 			string response = "{";
-			response += "\"count\":\"" + players.Count + "\"";
+			response += "\"count\":\"" + players.Count + "\", ";
 			response += "\"players\":[" ;
 
 			List<string> entries = players.ConvertAll<string>((node) => {
