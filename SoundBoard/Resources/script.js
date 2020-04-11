@@ -80,13 +80,11 @@ function readStatus() {
                 path = json.path;
                 changeButtons(json);
             }
-            else {
-                updateButtons(json);
-            }
             if (shouldUpdate) {
                 changeButtons(json);
                 shouldUpdate = false;
             }
+            updateButtons(json);
         }
         httpRequest = null;
     }
