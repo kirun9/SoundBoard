@@ -112,8 +112,6 @@ namespace SoundBoard
 
 		private void exitToolStripMenuItem_Click(Object sender, EventArgs e)
 		{
-			stopToolStripMenuItem_Click(null, null);
-
 			Environment.ExitCode = 0;
 			Application.Exit();
 		}
@@ -925,6 +923,8 @@ namespace SoundBoard
 		private void Form1_FormClosed(Object sender, FormClosedEventArgs e)
 		{
 			exitToolStripMenuItem_Click(null, null);
+			listener?.Stop();
+			listener?.Close();
 		}
 
 		private void settingsToolStripMenuItem1_Click(Object sender, EventArgs e)
