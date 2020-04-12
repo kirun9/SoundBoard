@@ -13,7 +13,6 @@ using System.WinApi;
 using System.Windows.Forms;
 using WMPLib;
 
-
 namespace SoundBoard
 {
 	public partial class Form1 : Form
@@ -198,7 +197,6 @@ namespace SoundBoard
 								e.Node.Tag = nodeTag;
 							}
 						};
-
 						player.controls.play();
 					}
 				}
@@ -533,6 +531,31 @@ namespace SoundBoard
 
 		private void startToolStripMenuItem_Click(Object sender, EventArgs e)
 		{
+			
+			void sendDefaultFile(string webFilePath, HttpListenerContext context, StreamWriter writer)
+			{
+				void sendResponse(MimeType mimeType, string resource)
+				{
+					context.Response.ContentType = mimeType;
+					writer.Write(resource);
+					context.Response.StatusCode = 200;
+				}
+
+				if (webFilePath == "index.html") sendResponse(MimeType.Html, Properties.Resources.index);
+				else if (webFilePath == "navbar.css") sendResponse(MimeType.Css, Properties.Resources.navbar);
+				else if (webFilePath == "script.js") sendResponse(MimeType.JavaScript, Properties.Resources.script);
+				else if (webFilePath == "soundboard.css") sendResponse(MimeType.Css, Properties.Resources.soundboard);
+
+				else if (webFilePath == "nowPlaying.html") sendResponse(MimeType.Html, Properties.Resources.nowPlaying_html);
+				else if (webFilePath == "nowPlaying.css") sendResponse(MimeType.Css, Properties.Resources.nowPlaying_css);
+				else if (webFilePath == "nowPlaying.js") sendResponse(MimeType.Css, Properties.Resources.nowPlaying_js);
+
+				else
+				{
+					context.Response.StatusCode = 404;
+				}
+			}
+
 			listener = new HttpListener();
 			var host = Dns.GetHostEntry(Dns.GetHostName());
 			if (!ServerSettings.LocalHostOnly)
@@ -593,34 +616,7 @@ namespace SoundBoard
 								{
 									if (!ServerSettings.CustomFilesLocation)
 									{
-										if (webFilePath == "index.html")
-										{
-											context.Response.ContentType = MimeType.Html;
-											writer.Write(Properties.Resources.index);
-											context.Response.StatusCode = 200;
-										}
-										else if (webFilePath == "navbar.css")
-										{
-											context.Response.ContentType = MimeType.Css;
-											writer.Write(Properties.Resources.navbar);
-											context.Response.StatusCode = 200;
-										}
-										else if (webFilePath == "script.js")
-										{
-											context.Response.ContentType = MimeType.JavaScript;
-											writer.Write(Properties.Resources.script);
-											context.Response.StatusCode = 200;
-										}
-										else if (webFilePath == "soundboard.css")
-										{
-											context.Response.ContentType = MimeType.Css;
-											writer.Write(Properties.Resources.soundboard);
-											context.Response.StatusCode = 200;
-										}
-										else
-										{
-											context.Response.StatusCode = 404;
-										}
+										sendDefaultFile(webFilePath, context, writer);
 									}
 									else
 									{
@@ -635,41 +631,14 @@ namespace SoundBoard
 										}
 										catch (FileNotFoundException)
 										{
-											if (webFilePath == "index.html")
-											{
-												context.Response.ContentType = MimeType.Html;
-												writer.Write(Properties.Resources.index);
-												context.Response.StatusCode = 200;
-											}
-											else if (webFilePath == "navbar.css")
-											{
-												context.Response.ContentType = MimeType.Css;
-												writer.Write(Properties.Resources.navbar);
-												context.Response.StatusCode = 200;
-											}
-											else if (webFilePath == "script.js")
-											{
-												context.Response.ContentType = MimeType.JavaScript;
-												writer.Write(Properties.Resources.script);
-												context.Response.StatusCode = 200;
-											}
-											else if (webFilePath == "soundboard.css")
-											{
-												context.Response.ContentType = MimeType.Css;
-												writer.Write(Properties.Resources.soundboard);
-												context.Response.StatusCode = 200;
-											}
-											else
-											{
-												context.Response.StatusCode = 404;
-											}
+											sendDefaultFile(webFilePath, context, writer);
 										}
 									}
 								}
 							}
 							context.Response.Close();
 						}
-						catch (Exception ex)
+						catch (Exception)
 						{
 							context.Response.StatusCode = 500;
 							context.Response.Close();
@@ -680,7 +649,7 @@ namespace SoundBoard
 				{
 
 				}
-				catch (Exception ex) {
+				catch (Exception) {
 				
 				}
 			});
@@ -770,7 +739,7 @@ namespace SoundBoard
 			ret += "\"isBack\":\"" + isBack.ToString().ToLower() + "\", ";
 			ret += "\"isFavorite\":\"" + isFavorite.ToString().ToLower() + "\", ";
 			ret += "\"isDir\":\"" + isDir.ToString().ToLower() + "\"";
-			if (filePath != null) ret += ", \"filePath\":\"" + filePath + "\"";
+			if (filePath != null) ret += ", \"filePath\":\"" + filePath.Replace("\\", "/") + "\"";
 			ret += "}";
 			return ret;
 		}

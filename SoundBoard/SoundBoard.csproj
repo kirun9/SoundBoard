@@ -202,5 +202,14 @@
   <ItemGroup>
     <None Include="Resources\soundboard.css" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\nowPlaying.css" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\nowPlaying.html" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\nowPlaying.js" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

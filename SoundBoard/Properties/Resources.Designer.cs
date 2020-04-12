@@ -83,8 +83,12 @@ namespace SoundBoard.Properties {
         ///    &lt;body onload=&quot;start()&quot;&gt;
         ///        &lt;main&gt;
         ///            &lt;div class=&quot;grid&quot; id=&quot;grid&quot;&gt;
-        ///                &lt;span class=&quot;grid-item&quot;&gt;
-        ///                    &lt;a class=&quot;button&quot; data=&quot;&quot; href=&quot;#&quot;&gt;&lt;div&gt;&lt;p&gt;&amp;#128281;&lt;/p&gt;&lt;/div&gt;&lt; [rest of string was truncated]&quot;;.
+        ///            &lt;/div&gt;
+        ///        &lt;/main&gt;
+        ///
+        ///        &lt;nav class=&quot;navbar&quot;&gt;
+        ///            &lt;ul class=&quot;navbar-nav&quot;&gt;
+        ///                &lt;li [rest of string was truncated]&quot;;.
         /// </summary>
         internal static string index {
             get {
@@ -142,6 +146,93 @@ namespace SoundBoard.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to body {
+        ///    font-size: 22px;
+        ///    margin: 0;
+        ///}
+        ///
+        ///div.content {
+        ///    width: 100vw;
+        ///}
+        ///
+        ///ul {
+        ///    transition: width 3s;
+        ///    display: inline;
+        ///    padding-inline-start: 0;
+        ///    text-align: center;
+        ///}
+        ///
+        ///li {
+        ///    list-style: none;
+        ///    background: #d1703c;
+        ///    color: #fff;
+        ///    height: 0;
+        ///    line-height: 2em;
+        ///    margin: 0;
+        ///    padding: 0 1em;
+        ///    overflow: hidden;
+        ///
+        ///    border-bottom-left-radius: 0;
+        ///    border-bottom-right-radius: 0;
+        ///    transition: width 3s, border-bottom-left-radius 1s, border [rest of string was truncated]&quot;;.
+        /// </summary>
+        internal static string nowPlaying_css {
+            get {
+                return ResourceManager.GetString("nowPlaying.css", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to &lt;!DOCTYPE html&gt;
+        ///&lt;html lang=&quot;en&quot;&gt;
+        ///    &lt;head&gt;
+        ///        &lt;meta charset=&quot;utf-8&quot;&gt;
+        ///        &lt;title&gt;SoundBoard Now Playing&lt;/title&gt;
+        ///        &lt;link rel=&quot;icon&quot; href=&quot;favicon.ico&quot;&gt;
+        ///        &lt;script src=&quot;nowPlaying.js&quot;&gt;&lt;/script&gt;
+        ///        &lt;link rel=&quot;stylesheet&quot; href=&quot;nowPlaying.css&quot;&gt;
+        ///    &lt;/head&gt;
+        ///    &lt;body onload=&quot;start()&quot;&gt;
+        ///        &lt;div class=&quot;content&quot;&gt;
+        ///            &lt;ul id=&quot;list&quot; class=&quot;slide-fade&quot;&gt;&lt;/ul&gt;
+        ///        &lt;/div&gt;
+        ///    &lt;/body&gt;
+        ///&lt;/html&gt;.
+        /// </summary>
+        internal static string nowPlaying_html {
+            get {
+                return ResourceManager.GetString("nowPlaying.html", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to var oldjson;
+        ///var displaying = new Object();
+        ///var timeStep = 1000;
+        ///var lastElement;
+        ///
+        ///function start() {
+        ///    if (timeStep) {
+        ///        statusLoop();
+        ///    }
+        ///}
+        ///
+        ///function statusLoop() {
+        ///    var httpRequest = getRequest();
+        ///    try {
+        ///        httpRequest.open(&quot;GET&quot;, &quot;playing.html&quot;, true);
+        ///        httpRequest.onreadystatechange = function () {
+        ///            if (httpRequest &amp;&amp; httpRequest.readyState === 4 &amp;&amp; httpRequest.responseText) {
+        ///                if (httpRequest.responseText.charAt(0) !== &quot;&lt;&quot;) {
+        ///     [rest of string was truncated]&quot;;.
+        /// </summary>
+        internal static string nowPlaying_js {
+            get {
+                return ResourceManager.GetString("nowPlaying.js", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
         internal static System.Drawing.Bitmap pause {
@@ -165,22 +256,20 @@ namespace SoundBoard.Properties {
         ///   Looks up a localized string similar to var httpRequest;
         ///var timeStep = 1000;
         ///var path;
+        ///var shouldUpdate = false;
         ///var buttons = new Array();
         ///
-        ///function createButton(song, title) {
+        ///function createButton(song, title, isBack) {
+        ///    if (isBack === void 0) { isBack = false; }
         ///    var span = document.createElement(&quot;span&quot;);
         ///    var a = document.createElement(&quot;a&quot;);
         ///    a.className = &quot;button&quot;;
         ///    a.href = &quot;#&quot;;
         ///    var div = document.createElement(&quot;div&quot;);
         ///    var p = document.createElement(&quot;p&quot;);
-        ///    p.innerText = title;
+        ///    p.innerHTML = isBack ? &quot;&amp;#128281;&quot; : title;
         ///    div.append(p);
-        ///    a.append(div);
-        ///    a.setAttribute(&quot;data&quot;, song);
-        ///    a.onclick = function () {
-        ///        sendButtonRequest(song);
-        ///  [rest of string was truncated]&quot;;.
+        ///    a.append(di [rest of string was truncated]&quot;;.
         /// </summary>
         internal static string script {
             get {
@@ -197,7 +286,10 @@ namespace SoundBoard.Properties {
         ///    --background-trinary: #23232e;
         ///    --background-playing-primary: #733f3b;
         ///    --background-playing-secondary: #4E1313;
-        ///
+        ///    --background-fav-primary: #484716;
+        ///    --background-fav-secondary: #92901b;
+        ///    --background-dir-primary: #391b00;
+        ///    --background-dir-secondary: #552900;
         ///}
         ///
         ///body {
@@ -206,17 +298,7 @@ namespace SoundBoard.Properties {
         ///
         ///main {
         ///    padding: 1.368vw;
-        ///}
-        ///
-        ///.grid {
-        ///    margin: 0;
-        ///    padding: 0;
-        ///    display: grid;
-        ///    grid-template-columns: repeat(5, auto);
-        ///    gap: 1.368vw;
-        ///    grid-auto-rows: auto;
-        ///}
-        ///        /// [rest of string was truncated]&quot;;.
+        /// [rest of string was truncated]&quot;;.
         /// </summary>
         internal static string soundboard {
             get {
